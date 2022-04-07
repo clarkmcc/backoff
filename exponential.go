@@ -32,7 +32,7 @@ type Exponential struct {
 	// steps parameter is set to zero.
 	Cap time.Duration
 	// The maximum number of times we can exponentially backoff
-	Max int
+	MaxRetries int
 }
 
 // Step (1) returns an amount of time to sleep determined by the
@@ -64,6 +64,10 @@ func (b *Exponential) Step() time.Duration {
 	return duration
 }
 
+func (b *Exponential) Max() int {
+	return b.MaxRetries
+}
+
 // Jitter returns a time.Duration between duration and duration + maxFactor *
 // duration.
 //
@@ -77,23 +81,28 @@ func Jitter(duration time.Duration, maxFactor float64) time.Duration {
 	return wait
 }
 
-type ExponentialBackoffManager struct {
+type Backoff interface {
+	Step() time.Duration
+	Max() int
+}
+
+type Manager struct {
 	Clock   clock.Clock
-	backoff *Exponential // The backoff configuration
-	n       int          // The number of retries that have been performed so far
+	backoff Backoff // The backoff configuration
+	n       int     // The number of retries that have been performed so far
 }
 
 // next returns a new timer with the next exponential backoff interval, or returns
 // done if no more retries are necessary.
-func (e *ExponentialBackoffManager) next() (timer clock.Timer, done bool) {
+func (e *Manager) next() (timer clock.Timer, done bool) {
 	e.n++
-	if e.backoff.Max > 0 && e.n > e.backoff.Max {
+	if e.backoff.Max() > 0 && e.n > e.backoff.Max() {
 		return nil, true
 	}
 	return e.Clock.NewTimer(e.backoff.Step()), false
 }
 
-func (e *ExponentialBackoffManager) Next(ctx context.Context) bool {
+func (e *Manager) Next(ctx context.Context) bool {
 	timer, done := e.next()
 	if done {
 		return false
@@ -107,8 +116,8 @@ func (e *ExponentialBackoffManager) Next(ctx context.Context) bool {
 	}
 }
 
-func ExponentialBackoff(backoff *Exponential) *ExponentialBackoffManager {
-	return &ExponentialBackoffManager{
+func NewManager(backoff *Exponential) *Manager {
+	return &Manager{
 		Clock:   &clock.RealClock{},
 		backoff: backoff,
 	}

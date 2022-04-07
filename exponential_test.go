@@ -11,10 +11,11 @@ import (
 func TestExponentialBackoffManager_next(t *testing.T) {
 	c := clock.NewFakeClock(time.Unix(0, 0))
 
-	backoff := ExponentialBackoff(&Exponential{
-		Duration: time.Second,
-		Factor:   2,
-		Steps:    10,
+	backoff := NewManager(&Exponential{
+		Duration:   time.Second,
+		Factor:     2,
+		Steps:      10,
+		MaxRetries: 2,
 	})
 	backoff.Clock = c
 
@@ -58,11 +59,11 @@ func TestExponentialBackoffManager_next(t *testing.T) {
 
 func TestExponentialBackoffManager_Next(t *testing.T) {
 	ctx := context.Background()
-	backoff := ExponentialBackoff(&Exponential{
-		Duration: time.Millisecond,
-		Factor:   2,
-		Steps:    10,
-		Max:      3,
+	backoff := NewManager(&Exponential{
+		Duration:   time.Millisecond,
+		Factor:     2,
+		Steps:      10,
+		MaxRetries: 3,
 	})
 
 	i := 0

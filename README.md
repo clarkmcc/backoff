@@ -10,16 +10,16 @@ A more natural backoff and retry package.
 // the duration on every retry for the first five retries, or until we reach
 // 10-second intervals. Once we reach 10-second intervals, we keep retrying
 // every 10 seconds until we've retried 10 times.
-b := backoff.Exponential{
-    Duration: time.Second,
-    Factor: 2,
-    Steps: 5,
-    Cap: 10 * time.Second,
-    Max: 10
-}
+b := backoff.NewManager(&backoff.Exponential{
+    Duration:   time.Second,
+    Factor:     2,
+    Steps:      5,
+    Cap:        10 * time.Second,
+    MaxRetries: 10,
+})
 
 for b.Next(ctx) {
-    err := failableOperation()
+    err := retriableOperation()
     if err != nil {
         continue
     }
